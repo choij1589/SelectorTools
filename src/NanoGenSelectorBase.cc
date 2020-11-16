@@ -20,6 +20,8 @@ void NanoGenSelectorBase::Init(TTree *tree)
     doBorn_ = bornPart != nullptr && bornPart->GetVal();
     TParameter<bool>* barePart = (TParameter<bool>*) GetInputList()->FindObject("bare");
     doBareLeptons_ = barePart != nullptr && barePart->GetVal();
+	// just for a moment
+	doMatchDressed_ = barePart != nullptr && barePart->GetVal();
 
     TParameter<bool>* wSignOnly = (TParameter<bool>*) GetInputList()->FindObject("wSignOnly");
     weightSignOnly_ = wSignOnly != nullptr && wSignOnly->GetVal();
@@ -32,6 +34,8 @@ void NanoGenSelectorBase::Init(TTree *tree)
         systematics_[BornParticles] = "born";
     if (doBareLeptons_)
         systematics_[BareLeptons] = "barelep";
+    if (doMatchDressed_)
+		systematics_[MatchedDressedLeps] = "matchedDressed";
     if (doPreFSR_)
         systematics_[PreFSRLeptons] = "prefsr";
     if (doLHE_)
@@ -271,6 +275,23 @@ void NanoGenSelectorBase::LoadBranchesNanoAOD(Long64_t entry, SystPair variation
                 }
             }
         }
+
+		// match dressed leptons to bare leptons
+		matchedDressedLeptons.clear();
+		if (dressedLeptons.size() > 0 && doMatchDressed_) {
+			for (const auto &dressedLep : dressedLeptons) {
+				for (const auto &bareLep : bareLeptons) {
+					const float eta_bare = bareLep.eta();
+					const float eta_dressed = dressedLep.eta();
+					const float phi_bare = bareLep.phi();
+					const float phi_dressed = dressedLep.phi();
+					const float dR = TMath::Sqrt(TMath::Power(eta_bare-eta_dressed, 2) + TMath::Power(phi_bare-phi_dressed, 2));
+					if (dR < 0.3)
+						matchedDressedLeptons.emplace_back(dressedLep);
+				}
+			}
+		}
+
         // Warning! Only really works for the W
         if (bareLeptons.size() > 0 && doPhotons_) {
             auto& lep = bareLeptons.at(0);
@@ -279,6 +300,7 @@ void NanoGenSelectorBase::LoadBranchesNanoAOD(Long64_t entry, SystPair variation
                 photons.end()
             );
         }
+
         if (doLHE_) {
             for (size_t i = 0; i < *nLHEPart; i++) {
                 auto part = makeGenParticle(LHEPart_pdgId.At(i), 1, LHEPart_pt.At(i), 
@@ -301,7 +323,8 @@ void NanoGenSelectorBase::LoadBranchesNanoAOD(Long64_t entry, SystPair variation
         std::sort(bareLeptons.begin(), bareLeptons.end(), compareMaxByPt);
         std::sort(fsneutrinos.begin(), fsneutrinos.end(), compareMaxByPt);
         std::sort(preFSRLeptons.begin(), preFSRLeptons.end(), compareMaxByPt);
-        neutrinos = fsneutrinos;
+		std::sort(matchedDressedLeptons.begin(), matchedDressedLeptons.end(), compareMaxByPt);
+		neutrinos = fsneutrinos;
     }
     else if (variation.first == BareLeptons) {
         leptons = bareLeptons;
