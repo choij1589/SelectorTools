@@ -20,6 +20,7 @@ void NanoGenSelectorBase::Init(TTree *tree)
     doBorn_ = bornPart != nullptr && bornPart->GetVal();
     TParameter<bool>* barePart = (TParameter<bool>*) GetInputList()->FindObject("bare");
     doBareLeptons_ = barePart != nullptr && barePart->GetVal();
+	doMatchedDressed_ = doBareLeptons_;
 
     TParameter<bool>* wSignOnly = (TParameter<bool>*) GetInputList()->FindObject("wSignOnly");
     weightSignOnly_ = wSignOnly != nullptr && wSignOnly->GetVal();
@@ -32,6 +33,8 @@ void NanoGenSelectorBase::Init(TTree *tree)
         systematics_[BornParticles] = "born";
     if (doBareLeptons_)
         systematics_[BareLeptons] = "barelep";
+	if (doMatchedDressed_)
+		systematics_[MatchedDressedLeptons] = "matchedDressed";
     if (doPreFSR_)
         systematics_[PreFSRLeptons] = "prefsr";
     if (doLHE_)
@@ -203,6 +206,7 @@ void NanoGenSelectorBase::LoadBranchesNanoAOD(Long64_t entry, SystPair variation
     if (variation.first == Central) {
         bornLeptons.clear();
         dressedLeptons.clear();
+		matchedDressedLeptons.clear();
         preFSRLeptons.clear();
         bareLeptons.clear();
         lheLeptons.clear();
@@ -271,6 +275,16 @@ void NanoGenSelectorBase::LoadBranchesNanoAOD(Long64_t entry, SystPair variation
                 }
             }
         }
+		if (doMatchedDressed_ && dressedLeptons.size() > 0) {
+			for (const auto &dressedLep : dressedLeptons) {
+				for (const auto &bareLep : bareLeptons) {
+					const float dR = reco::deltaR(dressedLep, bareLep);
+					if (dR < 0.3)
+						matchedDressedLeptons.emplace_back(dressedLep);
+				}
+			}
+		}
+
         // Warning! Only really works for the W
         if (bareLeptons.size() > 0 && doPhotons_) {
             auto& lep = bareLeptons.at(0);
@@ -301,7 +315,8 @@ void NanoGenSelectorBase::LoadBranchesNanoAOD(Long64_t entry, SystPair variation
         std::sort(bareLeptons.begin(), bareLeptons.end(), compareMaxByPt);
         std::sort(fsneutrinos.begin(), fsneutrinos.end(), compareMaxByPt);
         std::sort(preFSRLeptons.begin(), preFSRLeptons.end(), compareMaxByPt);
-        neutrinos = fsneutrinos;
+        std::sort(matchedDressedLeptons.begin(), matchedDressedLeptons.end(), compareMaxByPt);
+		neutrinos = fsneutrinos;
     }
     else if (variation.first == BareLeptons) {
         leptons = bareLeptons;

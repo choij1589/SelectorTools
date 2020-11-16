@@ -30,6 +30,7 @@ public :
     reco::GenParticleCollection leptons;
     reco::GenParticleCollection bareLeptons;
     reco::GenParticleCollection dressedLeptons;
+	reco::GenParticleCollection matchedDressedLeptons;
     reco::GenParticleCollection bornLeptons;
     reco::GenParticleCollection lheLeptons;
     reco::GenParticleCollection preFSRLeptons;
@@ -68,6 +69,7 @@ public :
     bool doLHE_ = false;
     bool doPreFSR_ = false;
     bool doBareLeptons_ = false;
+	bool doMatchedDressed_ = false;
 
     float refWeight = 1;
 
