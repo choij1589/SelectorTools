@@ -28,7 +28,7 @@ def getDifference(fOut, name, dir1, dir2, ratioFunc=None):
             differences.Add(ratio) 
     return differences
 
-def makeUnrolledHist(init_2D_hist, xbins, ybins, name=""):
+def makeUnrolledHist(init_2D_hist, xbins, ybins, name="", overflow=False):
     if type(xbins) != array or type(ybins) != array:
         xbins = array.array('d', xbins)
         ybins = array.array('d', ybins)
@@ -55,7 +55,7 @@ def makeUnrolledHist(init_2D_hist, xbins, ybins, name=""):
             entry = i*(hist.GetNbinsX()) + j
             content = hist.GetBinContent(j)
             error = hist.GetBinError(j)
-            if j == hist.GetNbinsX():
+            if j == hist.GetNbinsX() and overflow:
                 content += hist.GetBinContent(j+1)
                 error += hist.GetBinError(j+1)
             unrolled_hist.SetBinContent(entry, content)
@@ -255,7 +255,7 @@ def getScaleHists(scale_hist2D, name, rebin=None, entries=[i for i in range(1,10
     map(lambda h: logging.debug("Hist %s has integral %0.2f" % (h.GetName(), h.Integral())), hists)
     return getVariationHists(hists, name, hist_name, lambda x: x[-1], lambda x: x[1], central)
 
-# Pairs should correspond to muR, muF in (0.5, 1) ordered muR, muF, muR+muF
+# Pairs should correspond to muR, muF in (0.5, 2) ordered muR, muF, muR+muF
 def makeExpandedScaleHists(hists, hist_name, name, pairs):
     variationSet = []
     for label, indices in zip(["muR", "muF", "muRmuF"], pairs):
@@ -329,6 +329,12 @@ def getAllTransformed3DHists(hist3D, transformation, transform_args, name, entri
         hist1D = transformation(hist2D, *transform_args)
         hists.append(hist1D)
     return hists
+
+def getTransformed3DLHEHists(hist3D, transformation, transform_args, entries, name, varName):
+    hists = getAllTransformed3DHists(hist3D, transformation, transform_args, name, entries)
+    hist_name = hist3D.GetName().replace("2D", "unrolled")
+    hist_name = hist_name.replace("lheWeights", varName+("_" if name != "" else "")+name+"Up")
+    return getVariationHists(hists, name, hist_name, lambda x: x[0], lambda x: x[1]), hist_name
 
 def getTransformed3DScaleHists(scale_hist3D, transformation, transform_args, name, entries=range(1,10), exclude=[7,9]):
     scale_hists = getAllTransformed3DHists(scale_hist3D, transformation, transform_args, name, entries, exclude)

@@ -4,6 +4,8 @@
 #include <regex>
 #include <cmath>
 #include <TRandom3.h>
+#include <numeric>
+#include "TParameter.h"
 
 void WGenSelector::Init(TTree *tree)
 {
@@ -12,34 +14,33 @@ void WGenSelector::Init(TTree *tree)
     hists1D_ = {"CutFlow", "mWmet", "yWmet", "ptWmet", "mW", "yW", "ptW", "mTtrue", "mTmet",
         "ptl", "etal", "phil", "ptnu", "etanu", "phinu", "MET", "MET_phi",
         "ptj1", "ptj2", "etaj1", "etaj2", "nJets",
-        "dRlgamma_maxptassoc", "dRlgamma_minassoc", "ptg_closeassoc", "ptg_maxassoc", "nGammaAssoc", 
-        "ptgmax_assoc", "ptgmax_assoc",
+        //"dRlgamma_maxptassoc", "dRlgamma_minassoc", "ptg_closeassoc", "ptg_maxassoc", "nGammaAssoc", 
+        //"ptgmax_assoc", "ptgmax_assoc",
         "ptl_smear",
     };
     hists2D_ = {"etal_ptl_2D", "etal_ptl_smear_2D"};
-    doSystematics_ = true;
-    systematics_ = {
-        {mWShift100MeVUp, "mWShift100MeVUp"},
-        {mWShift50MeVUp, "mWShift50MeVUp"},
-        {mWShift25MeVUp, "mWShift25MeVUp"},
-        {mWShift20MeVUp, "mWShift20MeVUp"},
-        {mWShift10MeVUp, "mWShift10MeVUp"},
-        {mWShift100MeVDown, "mWShift100MeVDown"},
-        {mWShift50MeVDown, "mWShift50MeVDown"},
-        {mWShift25MeVDown, "mWShift25MeVDown"},
-        {mWShift20MeVDown, "mWShift20MeVDown"},
-        {mWShift10MeVUp, "mWShift10MeVUp"},
-        {BareLeptons, "barelep"},
-        {PreFSRLeptons, "prefsr"},
-        {BornParticles, "born"},
-        {LHEParticles, "lhe"},
-        {muonScaleUp, "CMS_scale_mUp"},
-        {muonScaleDown, "CMS_scale_mDown"},
-    };
-    systHists_ = hists1D_;
+
+    TParameter<bool>* massVar = (TParameter<bool>*) GetInputList()->FindObject("massVar");
+    doMassVar_ = massVar != nullptr && massVar->GetVal();
+    TParameter<bool>* muonVar = (TParameter<bool>*) GetInputList()->FindObject("muonVar");
+    doMuonVar_ = muonVar != nullptr && muonVar->GetVal();
+
+    if (doMassVar_) {
+        systematics_[mWShift50MeVUp] = "mWBWShift50MeVUp";
+        systematics_[mWShift50MeVDown] = "mWBWShift50MeVDown";
+        systematics_[mWShift100MeVUp] = "mWBWShift100MeVUp";
+        systematics_[mWShift100MeVDown] = "mWBWShift100MeVDown";
+    }
+
+    if (doMuonVar_) {
+        systematics_[muonScaleUp] = "CMS_scale_mUp";
+        systematics_[muonScaleDown] = "CMS_scale_mDown";
+    }
+
+    systHists_ = {"ptl", "mW", "yW", "ptW"};
     systHists2D_ = hists2D_;
 
-    weighthists1D_ = {"CutFlow", "mW", "mTmet", "yW", "ptW", "ptl", "ptl_smear", "etal", "ptnu", "etanu", };
+    weighthists1D_ = systHists_;
     weighthists2D_ = hists2D_;
 
     refWeight = 1;
@@ -53,8 +54,8 @@ void WGenSelector::Init(TTree *tree)
         GAMMAV_GEN_ = 2088.720;
     }
     else if (name_.find("minnlo") != std::string::npos) {
-        MV_GEN_ = 80351.97159;
-        GAMMAV_GEN_ = 2084.29889;
+        MV_GEN_ = 80351.812293789408;
+        GAMMAV_GEN_ = 2090.4310808144846;
     }
     else {
         MV_GEN_ = 80419.;
@@ -83,9 +84,13 @@ void WGenSelector::LoadBranchesNanoAOD(Long64_t entry, SystPair variation) {
         }
     }
 
-    if (variation.first == Central)
+    if (variation.first == Central) {
         cenWeight = weight;
+        ptVlhe = wCand.pt();
+        mVlhe = wCand.mass()*1000.;
+    }
     else if (variation.first == LHEParticles) {
+        // define at LHE level if it exists
         ptVlhe = wCand.pt();
         mVlhe = wCand.mass()*1000.;
     }
@@ -101,8 +106,9 @@ void WGenSelector::LoadBranchesNanoAOD(Long64_t entry, SystPair variation) {
         weight = cenWeight*breitWignerWeight(25.);
     else if (variation.first == mWShift25MeVDown)
         weight = cenWeight*breitWignerWeight(-25.);
-    else if (variation.first == mWShift50MeVUp)
+    else if (variation.first == mWShift50MeVUp) {
         weight = cenWeight*breitWignerWeight(50.);
+    }
     else if (variation.first == mWShift50MeVDown)
         weight = cenWeight*breitWignerWeight(-50.);
     else if (variation.first == mWShift100MeVUp)
@@ -134,6 +140,10 @@ void WGenSelector::LoadBranchesNanoAOD(Long64_t entry, SystPair variation) {
         channel_ = Unknown;
         channelName_ = "Unknown";
         return;
+    }
+
+    if (name_.find("N3LLCorr") != std::string::npos) {
+        weight *= ptZSF_->Evaluate1D(ptVlhe);
     }
 }
 
@@ -204,24 +214,38 @@ void WGenSelector::FillHistogramsByName(Long64_t entry, std::string& toAppend, S
         ptl_smear_fill *= 0.999;
 
     if (std::find(theoryVarSysts_.begin(), theoryVarSysts_.end(), variation.first) != theoryVarSysts_.end()) {
-        size_t minimalWeights = nLHEScaleWeight+nLHEScaleWeightAltSet1+nLHEUnknownWeight+nLHEUnknownWeightAltSet1;
-        size_t nWeights = variation.first == Central ? minimalWeights : minimalWeights+nLHEPdfWeight;
+        size_t nScaleWeights = nLHEScaleWeight+nLHEScaleWeightAltSet1;
+        size_t minimalWeights = nLHEScaleWeight+nLHEScaleWeightAltSet1+nMEParamWeight;
+        size_t allPdfWeights = std::accumulate(nLHEPdfWeights.begin(), nLHEPdfWeights.end(), 1);
 
+        size_t nWeights = minimalWeights+nLHEUnknownWeight+nLHEUnknownWeightAltSet1+allPdfWeights;
+        size_t pdfOffset = nScaleWeights;
+        size_t pdfIdx = 0;
         for (size_t i = 0; i < nWeights; i++) {
             float thweight = 1;
             if (i < nLHEScaleWeight)
                 thweight = LHEScaleWeight[i];
-            else if (i < nLHEScaleWeight+nLHEScaleWeightAltSet1)
+            else if (i < nScaleWeights)
                 thweight = LHEScaleWeightAltSet1[i-nLHEScaleWeight];
-            else if (i < minimalWeights-nLHEUnknownWeightAltSet1)
-                thweight = LHEUnknownWeight[i-minimalWeights+nLHEUnknownWeight+nLHEUnknownWeightAltSet1];
-            else if (i < minimalWeights)
-                thweight = LHEUnknownWeight[i-minimalWeights+nLHEUnknownWeightAltSet1];
-            else 
-                thweight = LHEPdfWeight[i-minimalWeights];
+            else if (i < nScaleWeights+allPdfWeights) {
+                thweight = LHEPdfWeights[pdfIdx][i-pdfOffset];
+                if (i == pdfOffset+nLHEPdfWeights.at(pdfIdx)-1) {
+                    pdfOffset += nLHEPdfWeights.at(pdfIdx++);
+                }
+            }
+            else if (i >= nScaleWeights+allPdfWeights-1) {
+                thweight = MEParamWeight[i-nLHEScaleWeight-allPdfWeights];
+            }
+            //TODO: This is broken
+            //else if (i < minimalWeights-nLHEUnknownWeightAltSet1)
+            //    thweight = LHEUnknownWeight[i-minimalWeights+nLHEUnknownWeight+nLHEUnknownWeightAltSet1];
+            //else if (i < minimalWeights)
+            //    thweight = LHEUnknownWeightAltSet1[i-minimalWeights+nLHEUnknownWeightAltSet1];
+            //else 
+            //    thweight = LHEPdfWeight[i-minimalWeights];
 
-            if (centralWeightIndex_ != -1 && scaleWeights_)
-                thweight /= LHEScaleWeight[centralWeightIndex_];
+            //if (centralWeightIndex_ != -1 && scaleWeights_)
+            //    thweight /= LHEScaleWeight[centralWeightIndex_];
 
             if (((variation.first == ptV0to3 || variation.first == ptV0to3_lhe) && ptVlhe > 3.) ||
                     ((variation.first == ptV3to5 || variation.first == ptV3to5_lhe) && (ptVlhe < 3. || ptVlhe > 5.))  ||
@@ -236,7 +260,7 @@ void WGenSelector::FillHistogramsByName(Long64_t entry, std::string& toAppend, S
                 thweight = 1;
             }
 
-            thweight = (thweightSuppress_ && std::abs(thweight) < thweightSuppress_) ? thweight : (thweight > 0 ? thweightSuppress_ : -1*thweightSuppress_);
+            thweight = (!thweightSuppress_ || std::abs(thweight) < thweightSuppress_) ? thweight : (thweight > 0 ? thweightSuppress_ : -1*thweightSuppress_);
             thweight *= weight;
             SafeHistFill(weighthistMap1D_, concatenateNames("mW", toAppend), channel_, variation.first, wCand.mass(), i, thweight);
             SafeHistFill(weighthistMap1D_, concatenateNames("yW", toAppend), channel_, variation.first, wCand.Rapidity(), i, thweight);

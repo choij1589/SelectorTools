@@ -34,7 +34,7 @@ def getComLineArgs():
     parser.add_argument("-m", "--merge", nargs=2, type=str,
         metavar=("mergedFileName", "completeFraction"),
         default=None, help="Merge outputs from all jobs to file (submit as DAG)" \
-        "if > completeFraction (in %) jobs complete")
+        "if > completeFraction (in %%) jobs complete")
     parser.add_argument("--force", action='store_true',
         help="Force overwrite of existing directories")
     parser.add_argument("--removeUnmerged", action='store_true',
@@ -78,7 +78,7 @@ def setupMergeStep(submit_dir, queue, numjobs, merge, removeUnmerged):
     outfile = "/".join([submit_dir, "submit_and_merge.dag"])
     ConfigureJobs.fillTemplatedFile(template, outfile, 
             {"minComplete" : int(completeFraction*numjobs),
-            "postMerge" : "SCRIPT POST B removeRootFiles.sh" if removeUnmerged else ""})
+            "postMerge" : ("SCRIPT POST B removeRootFiles.sh %s" % merge_file) if removeUnmerged else ""})
 
     for f in ["list_infiles.sh", "completed.sh", "removeRootFiles.sh"]:
         shutil.copy("Templates/CondorSubmit/%s" % f, "/".join([submit_dir, f]))
@@ -159,7 +159,7 @@ def writeSubmitFile(submit_dir, analysis, selection, input_tier, queue, filelist
         "filelist" : filelist.split(".txt")[0],
         "nPerJob" : nPerJob,
         "nJobs" : int(math.ceil(float(numfiles)/nPerJob)),
-        "extraArgs" : "--debug" if not selArgs else ("--debug --selectorArgs %s" % " ".join(selArgs))
+        "extraArgs" : "--debug --compress %s" % ("" if not selArgs else ("--selectorArgs "+" ".join(selArgs)))
     }
 
     template = "Templates/CondorSubmit/submit_template.jdl"

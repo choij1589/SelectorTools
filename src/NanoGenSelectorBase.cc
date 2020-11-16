@@ -10,6 +10,17 @@ void NanoGenSelectorBase::Init(TTree *tree)
     refWeight = 1;
     TParameter<bool>* doTheory = (TParameter<bool>*) GetInputList()->FindObject("theoryUnc");
     doTheoryVars_ = doTheory != nullptr && doTheory->GetVal();
+    TParameter<bool>* theoryPrefsr = (TParameter<bool>*) GetInputList()->FindObject("theoryPrefsr");
+    bool doTheoryPrefsr = theoryPrefsr != nullptr && theoryPrefsr->GetVal();
+    TParameter<bool>* lhePart = (TParameter<bool>*) GetInputList()->FindObject("lhe");
+    doLHE_ = lhePart != nullptr && lhePart->GetVal();
+    TParameter<bool>* prefsrPart = (TParameter<bool>*) GetInputList()->FindObject("prefsr");
+    doPreFSR_ = prefsrPart != nullptr && prefsrPart->GetVal();
+    TParameter<bool>* bornPart = (TParameter<bool>*) GetInputList()->FindObject("born");
+    doBorn_ = bornPart != nullptr && bornPart->GetVal();
+    TParameter<bool>* barePart = (TParameter<bool>*) GetInputList()->FindObject("bare");
+    doBareLeptons_ = barePart != nullptr && barePart->GetVal();
+
     TParameter<bool>* wSignOnly = (TParameter<bool>*) GetInputList()->FindObject("wSignOnly");
     weightSignOnly_ = wSignOnly != nullptr && wSignOnly->GetVal();
     TParameter<int>* wSuppress = (TParameter<int>*) GetInputList()->FindObject("wSuppress");
@@ -17,13 +28,21 @@ void NanoGenSelectorBase::Init(TTree *tree)
     TParameter<int>* thwSuppress = (TParameter<int>*) GetInputList()->FindObject("thwSuppress");
     thweightSuppress_ = thwSuppress != nullptr ? thwSuppress->GetVal() : 0;
 
+    if (doBorn_)
+        systematics_[BornParticles] = "born";
+    if (doBareLeptons_)
+        systematics_[BareLeptons] = "barelep";
+    if (doPreFSR_)
+        systematics_[PreFSRLeptons] = "prefsr";
+    if (doLHE_)
+        systematics_[LHEParticles] = "lhe";
+
     if (doTheoryVars_) {
         theoryVarSysts_.insert(theoryVarSysts_.begin(), Central);
-        theoryVarSysts_.insert(theoryVarSysts_.end(), LHEParticles);
+    }
+    if (doTheoryPrefsr) {
         theoryVarSysts_.insert(theoryVarSysts_.end(), PreFSRLeptons);
-        //theoryVarSysts_.insert(theoryVarSysts_.end(), BareLeptons);
-        //theoryVarSysts_.insert(theoryVarSysts_.end(), mZShift100MeVUp);
-        //theoryVarSysts_.insert(theoryVarSysts_.end(), mZShift100MeVDown);
+        //theoryVarSysts_.insert(theoryVarSysts_.end(), LHEParticles);
     }
 
     TParameter<bool>* doPtVSplit = (TParameter<bool>*) GetInputList()->FindObject("theoryPtV");
@@ -43,28 +62,17 @@ void NanoGenSelectorBase::Init(TTree *tree)
             {ptV27to40, "ptV27to40"},
             {ptV40toInf, "ptV40toInf"},
         };
-        if (selectionName == "None") {
-            ptvars = {
-                {ptV0to3_lhe, "lhe_ptV0to3"},
-                {ptV3to5_lhe, "lhe_ptV3to5"},
-                {ptV5to7_lhe, "lhe_ptV5to7"},
-                {ptV7to9_lhe, "lhe_ptV7to9"},
-                {ptV9to12_lhe, "lhe_ptV9to12"},
-                {ptV12to15_lhe, "lhe_ptV12to15"},
-                {ptV15to20_lhe, "lhe_ptV15to20"},
-                {ptV20to27_lhe, "lhe_ptV20to27"},
-                {ptV27to40_lhe, "lhe_ptV27to40"},
-                {ptV40toInf_lhe, "lhe_ptV40toInf"},
-            };
-        }
         for (auto& var : ptvars) {
             systematics_[var.first] = var.second;
             theoryVarSysts_.insert(theoryVarSysts_.end(), var.first);
         }
     }
+    doSystematics_ = !systematics_.empty();
+
     b.SetTree(tree);
     scaleWeights_ = (tree->GetListOfBranches()->FindObject("nLHEScaleWeight") != nullptr);
     altScaleWeights_ = (tree->GetListOfBranches()->FindObject("nLHEScaleWeightAltSet1") != nullptr);
+    paramWeights_ = (tree->GetListOfBranches()->FindObject("nMEParamWeight") != nullptr);
     unknownWeights_ = (tree->GetListOfBranches()->FindObject("nLHEUnknownWeight") != nullptr);
     unknownWeightsAlt_ = (tree->GetListOfBranches()->FindObject("nLHEUnknownWeightAltSet1") != nullptr);
     
@@ -104,10 +112,6 @@ void NanoGenSelectorBase::Init(TTree *tree)
     doFiducial_ = selection_ != None;
     if (!doFiducial_)
         std::cout << "INFO: No fiducial selection will be applied\n";
-    doBorn_ = std::find_if(systematics_.begin(), systematics_.end(), [](auto& s) { return s.first == BornParticles; }) != systematics_.end();
-    doBareLeptons_ = std::find_if(systematics_.begin(), systematics_.end(), [](auto& s) { return s.first == BareLeptons; }) != systematics_.end();
-    doLHE_ = std::find_if(systematics_.begin(), systematics_.end(), [](auto& s) { return s.first == LHEParticles; }) != systematics_.end();
-    doPreFSR_ = std::find_if(systematics_.begin(), systematics_.end(), [](auto& s) { return s.first == PreFSRLeptons; }) != systematics_.end();
     fReader.SetTree(tree);
 }
 
@@ -137,6 +141,10 @@ void NanoGenSelectorBase::SetBranchesNanoAOD() {
             b.SetSpecificBranch("LHEUnknownWeightAltSet1", LHEUnknownWeightAltSet1);
         }
     }
+    if (paramWeights_) {
+        b.SetSpecificBranch("nMEParamWeight", nMEParamWeight);
+        b.SetSpecificBranch("MEParamWeight", MEParamWeight);
+    }
 }
 
 void NanoGenSelectorBase::LoadBranchesNanoAOD(Long64_t entry, SystPair variation) { 
@@ -165,6 +173,10 @@ void NanoGenSelectorBase::LoadBranchesNanoAOD(Long64_t entry, SystPair variation
             b.SetSpecificEntry(entry, "LHEUnknownWeightAltSet1");
             b.SetSpecificEntry(entry, "nLHEUnknownWeightAltSet1");
         }
+    }
+    if (paramWeights_) {
+        b.SetSpecificEntry(entry, "MEParamWeight");
+        b.SetSpecificEntry(entry, "nMEParamWeight");
     }
 
     if (!scaleWeights_)
@@ -386,6 +398,15 @@ reco::GenParticle NanoGenSelectorBase::makeGenParticle(int pdgid, int status, fl
     
     auto lep = reco::GenParticle(charge, vec, reco::Particle::Point(), pdgid, status, true);
     return lep;
+}
+
+void NanoGenSelectorBase::SetScaleFactors() {
+    std::cout << "Setting scale factors\n";
+    ptZSF_ = (ScaleFactor *) GetInputList()->FindObject("ptZ_N3LLCorr");
+    if (ptZSF_ == nullptr && name_.find("N3LLCorr") != std::string::npos) 
+        std::invalid_argument("Must pass pt correction SF");
+    else if (ptZSF_ == nullptr) 
+        std::invalid_argument("Must pass pt correction SF");
 }
 
 void NanoGenSelectorBase::buildHessian2MCSet() {

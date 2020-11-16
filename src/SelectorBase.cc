@@ -262,9 +262,15 @@ void SelectorBase::InitializeHistogramsFromConfig() {
             if (histMap1D_.find(centralLabel) != histMap1D_.end() || histMap2D_.find(centralLabel) != histMap2D_.end()) { 
                 InitializeHistogramFromConfig(name, chan, histData);
             }
-            // May add a syst hist to plotobjects for plotting purposes, surpress errors in this case
-            else if (std::find(tempSystHistNames.begin(), tempSystHistNames.end(), name) == tempSystHistNames.end())
-                std::cerr << "Skipping invalid histogram '" << name << "'" << std::endl;
+            //Don't print out a ton of annoying errors if it's a syst hist
+            else {
+                if (std::find(tempSystHistNames.begin(), tempSystHistNames.end(), name) == tempSystHistNames.end())
+                    break;
+                size_t idx = centralLabel.name.find_last_of("_");
+                HistLabel tmplabel = {idx != std::string::npos ? centralLabel.name.substr(0, idx) : "", chan.first, Central};
+                if (idx == std::string::npos || (histMap1D_.find(tmplabel) == histMap1D_.end() && histMap2D_.find(tmplabel) == histMap2D_.end()))
+                    std::cerr << "Skipping invalid histogram '" << name << "'" << std::endl;
+            }
         }
     }
 
@@ -307,26 +313,27 @@ void SelectorBase::InitializeHistogramFromConfig(std::string name, ChannelPair c
         HistLabel histlabel = {name, channel.first, variation.first};
 
         if (variation.first == Central) {
-            if (is1D) 
+            if (is1D) {
                 AddObject<TH1D>(histMap1D_[histlabel], histName.c_str(), histData.at(0).c_str(),
                         nbins, xmin, xmax);
-            else
+            }
+            else {
                 AddObject<TH2D>(histMap2D_[histlabel], histName.c_str(), histData.at(0).c_str(), 
                         nbins, xmin, xmax, nbinsy, ymin, ymax);
+            }
         }
-        else if ((is1D && std::find(systHists_.begin(), systHists_.end(), name) == systHists_.end()) ||
-                    (!is1D && std::find(systHists2D_.begin(), systHists2D_.end(), name) == systHists2D_.end()))
-            continue;
-
-        if (is1D) {
-            histMap1D_[histlabel] = {};
-            AddObject<TH1D>(histMap1D_[histlabel], histName.c_str(), 
-                histData.at(0).c_str(), nbins, xmin, xmax);
-        }
-        else {
-            histMap1D_[histlabel] = {};
-            AddObject<TH2D>(histMap2D_[histlabel], histName.c_str(), 
-                histData.at(0).c_str(), nbins, xmin, xmax, nbinsy, ymin, ymax);
+        else if ((is1D && std::find(systHists_.begin(), systHists_.end(), name) != systHists_.end()) ||
+                    (!is1D && std::find(systHists2D_.begin(), systHists2D_.end(), name) != systHists2D_.end())) {
+            if (is1D) {
+                histMap1D_[histlabel] = {};
+                AddObject<TH1D>(histMap1D_[histlabel], histName.c_str(), 
+                    histData.at(0).c_str(), nbins, xmin, xmax);
+            }
+            else {
+                histMap1D_[histlabel] = {};
+                AddObject<TH2D>(histMap2D_[histlabel], histName.c_str(), 
+                    histData.at(0).c_str(), nbins, xmin, xmax, nbinsy, ymin, ymax);
+            }
         }
 
         if (std::find(theoryVarSysts_.begin(), theoryVarSysts_.end(), variation.first) != theoryVarSysts_.end()) {

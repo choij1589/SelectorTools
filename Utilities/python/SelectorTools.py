@@ -8,6 +8,7 @@ import os
 import multiprocessing
 import subprocess
 import logging
+import numpy
 
 class SelectorDriver(object):
     def __init__(self, analysis, selection, input_tier, year):
@@ -27,6 +28,7 @@ class SelectorDriver(object):
             "Efficiency" : "Efficiency",
         }
 
+        self.select = None
         self.subanalysis = None
         if analysis.find(":") != -1:
             analysis, self.subanalysis = analysis.split(':')
@@ -48,15 +50,18 @@ class SelectorDriver(object):
         self.datasets = {}
         self.regions = {}
         self.maxEntries = -1
+        self.maxFiles = -1
         self.nProcessed = 0
+        self.compress = False
 
     # Needed to parallelize class member function, see
     # https://stackoverflow.com/questions/1816958/cant-pickle-type-instancemethod-when-using-multiprocessing-pool-map
     def __call__(self, args):
+        self.select = getattr(ROOT, self.selector_name)()
         self.processDatasetHelper(args)
 
-    def tempfileName(self, dataset):
-        return "temp_%s_%s" % (dataset, self.outfile_name.split("/")[-1])
+    def tempfileName(self):
+        return "temp_%s_%s" % (multiprocessing.current_process().name, self.outfile_name.split("/")[-1])
 
     def setChannels(self, channels):
         self.channels = channels
@@ -64,11 +69,23 @@ class SelectorDriver(object):
     def setMaxEntries(self, maxEntries):
         self.maxEntries = maxEntries
 
+    def setMaxFiles(self, maxFiles):
+        self.maxFiles = maxFiles
+
     def setAddSumWeights(self, addSumWeights):
         self.addSumweights = addSumWeights
 
     def outputFile(self):
         return self.outfile
+    
+    def setCompress(self, compress):
+        self.compress = compress
+
+    def updateCurrentFile(self, currfile_name):
+        self.current_file = ROOT.TFile.Open(currfile_name, "update")
+        if self.compress:
+            self.current_file.SetCompressionAlgorithm(2)
+            self.current_file.SetCompressionLevel(5)
     
     def setOutputfile(self, outfile_name):
         if self.outfile:
@@ -77,6 +94,10 @@ class SelectorDriver(object):
         self.outfile = ROOT.gROOT.FindObject(outfile_name)
         if not self.outfile:
             self.outfile = ROOT.TFile.Open(outfile_name, "recreate")
+        if self.compress:
+            self.outfile.SetCompressionAlgorithm(2)
+            self.outfile.SetCompressionLevel(5)
+
         self.current_file = self.outfile
 
     def addTNamed(self, name, title):
@@ -176,6 +197,18 @@ class SelectorDriver(object):
 
             self.datasets[dataset] = [file_path]
 
+    def expandDatasetFilePaths(self, nsplits):
+        nFiles = 0 
+        for dataset, file_path in self.datasets.iteritems():
+            maxPerSet = self.maxFiles/len(self.datasets) 
+            if dataset == self.datasets.keys()[-1]:
+                maxPerSet = self.maxFiles-nFiles
+            files = []
+            for f in file_path:
+                files.extend([f] if os.path.isfile(f) else glob.glob(f))
+            self.datasets[dataset] = numpy.array_split(files[:self.maxFiles] if self.maxFiles > 0 else files, nsplits)
+            nFiles += len(self.datasets[dataset])
+
     def applySelector(self):
         for chan in self.channels:
             self.addTNamed("channel", chan)
@@ -193,15 +226,15 @@ class SelectorDriver(object):
         self.selector_name = self.selector_name.replace("Selector", "BackgroundSelector")
 
     def processDataset(self, dataset, file_path, chan):
+        self.select = getattr(ROOT, self.selector_name)()
         logging.info("Processing dataset %s" % dataset)
-        select = getattr(ROOT, self.selector_name)()
-        select.SetInputList(self.inputs)
+        self.select.SetInputList(self.inputs)
         self.addTNamed("name", dataset)
         if dataset in self.regions:
             vec = ROOT.std.vector("string")()
             for i in self.regions[dataset]:
                 vec.push_back(i)
-            select.addSubprocesses(vec)
+            self.select.addSubprocesses(vec)
         # Only add for one channel
         addSumweights = self.addSumweights and self.channels.index(chan) == 0 and "data" not in dataset
         if addSumweights:
@@ -219,10 +252,13 @@ class SelectorDriver(object):
                 sumweights_hist = ROOT.TH1D("sumweights", "sumweights", 1000, 0, 1000)
             sumweights_hist.SetDirectory(ROOT.gROOT)
             if currfile_name:
-                self.current_file = ROOT.TFile.Open(currfile_name, "update")
-        self.processLocalFiles(select, file_path, addSumweights, chan)
+                self.updateCurrentFile(currfile_name)
+        self.processLocalFiles(file_path, addSumweights, chan)
+        self.collectOutput(dataset, chan)
 
-        output_list = select.GetOutputList()
+    def collectOutput(self, dataset, chan):
+        addSumweights = self.addSumweights and self.channels.index(chan) == 0 and "data" not in dataset
+        output_list = self.select.GetOutputList()
         processes = [dataset] + (self.regions[dataset] if dataset in self.regions else [])
         self.writeOutput(output_list, chan, processes, dataset, addSumweights)
 
@@ -237,7 +273,7 @@ class SelectorDriver(object):
         if self.numCores > 1:
             self.outfile.Close()
             chanNum = self.channels.index(chan)
-            self.current_file = ROOT.TFile.Open(self.tempfileName(dataset), "recreate" if chanNum == 0 else "update")
+            self.updateCurrentFile(self.tempfileName())
         if not self.current_file:
             self.current_file = ROOT.TFile.Open(self.outfile_name)
 
@@ -262,17 +298,21 @@ class SelectorDriver(object):
         del output_list
 
     def getFileNames(self, file_path):
-        xrootd = "/store" in file_path.split("/hdfs/")[0][:7]
-        xrootd_user = "/store/user" in file_path.split("/hdfs/")[0][:12]
+        xrootd = "store" in file_path.split("/")[0:4]
+        xrootd_user = "/store/user" in file_path.replace("/eos/cms", "")[:7]
         if not (xrootd or os.path.isfile(file_path) or len(glob.glob(file_path.rsplit("/", 1)[0]))):
             raise ValueError("Invalid path! Skipping dataset. Path was %s" 
                 % file_path)
 
-        # Assuming these are user files on HDFS, otherwise it won't work
         if (xrootd and not xrootd_user):
-            xrd = 'root://%s/' % ConfigureJobs.getXrdRedirector()
-            filenames = [xrd + file_path]
-            return filenames
+            xrd = 'root://%s/' % ConfigureJobs.getXrdRedirector(file_path)
+            allfiles = glob.glob(file_path) 
+            if not allfiles:
+                return [xrd + file_path]
+            else:
+                xrd_path = lambda x: "".join([xrd, "/store", x.rsplit("/store")[1]])
+                return [xrd_path(f) for f in allfiles]
+
         filenames =  glob.glob(file_path) if not xrootd_user else \
                 ConfigureJobs.getListOfHDFSFiles(file_path)
         filenames = ['root://cmsxrootd.hep.wisc.edu/' + f if "/store/user" in f[0:12] else f for f in filenames]
@@ -296,29 +336,34 @@ class SelectorDriver(object):
             raise RuntimeError("Failed to collect data from parallel run")
 
     def processParallelByDataset(self, datasets, chan):
-        numCores = min(self.numCores, len(datasets))
+        self.expandDatasetFilePaths(self.numCores)
+        expanded_datasets = [[d, f, chan] for d, files in datasets.iteritems() for f in files]
+        logging.debug(expanded_datasets)
         p = multiprocessing.Pool(processes=self.numCores)
-        p.map(self, [[dataset, f, chan] for dataset, f in datasets.iteritems()])
+        tempfiles = glob.glob(self.tempfileName().replace("MainProcess", "PoolWorker*"))
+        map(os.remove, tempfiles)
+        p.map(self, expanded_datasets)
         # Store arrays in temp files, since it can get way too big to keep around in memory
-        tempfiles = [self.tempfileName(d) for d in datasets] 
+        tempfiles = glob.glob(self.tempfileName().replace("MainProcess", "PoolWorker*"))
+        p.close()
         self.combineParallelFiles(tempfiles, chan)
 
     # Pool.map can only take in one argument, so expand the array
     def processDatasetHelper(self, args):
         self.processDataset(*args)
 
-    def processLocalFiles(self, selector, file_path, addSumweights, chan,):
+    def processLocalFiles(self, file_path, addSumweights, chan,):
         filenames = []
         for entry in file_path:
             filenames.extend(self.getFileNames(entry))
 
         for i, filename in enumerate(filenames):
-            self.nProcessed += self.processFile(selector, filename, addSumweights, chan, i+1)
-            print "processed %i events after %i files" % (self.nProcessed, i+1)
-            if self.maxEntries > 0 and self.nProcessed >= self.maxEntries:
+            self.nProcessed += self.processFile(filename, addSumweights, chan, i+1)
+            logging.info("Processed %i events after %i files" % (self.nProcessed, i+1))
+            if (self.maxEntries > 0 and self.nProcessed >= self.maxEntries) or (self.maxFiles > 0 and i > self.maxFiles):
                 break
                 
-    def processFile(self, selector, filename, addSumweights, chan, filenum=1):
+    def processFile(self, filename, addSumweights, chan, filenum=1):
         rtfile = ROOT.TFile.Open(filename)
         if not rtfile or not rtfile.IsOpen() or rtfile.IsZombie():
             raise IOError("Failed to open file %s!" % filename)
@@ -332,10 +377,10 @@ class SelectorDriver(object):
         logging.debug("Processing tree %s for file %s." % (tree.GetName(), rtfile.GetName()))
         toprocess = self.maxEntries-self.nProcessed
         if toprocess > 0:
-            tree.Process(selector, "", toprocess)
+            tree.Process(self.select, "", toprocess)
         else:
-            tree.Process(selector, "")
-        logging.debug("Processed file %s with selector %s." % (filename, selector.GetName()))
+            tree.Process(self.select, "")
+        logging.debug("Processed file %s with selector %s." % (filename, self.select.GetName()))
         if addSumweights:
             self.fillSumweightsHist(rtfile, filenum)
             logging.debug("Added sumweights hist.")
@@ -361,6 +406,7 @@ class SelectorDriver(object):
             if weightSignOnly or wSuppress:
                 meta_tree_name = "Events"
                 sumweights_branch = "genWeight" 
+                nevents_branch = "Entries$"
         elif self.ntupleType == "Bacon":
             sumWeightsType = "fromHist"
             weightshist_name = "hGenWeights"

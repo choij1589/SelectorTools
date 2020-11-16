@@ -24,6 +24,7 @@
 
 class NanoGenSelectorBase : public SelectorBase {
 public :
+    ScaleFactor* ptZSF_;
     PDFWeightsHelper pdfweightshelper_;
     // Derived values
     reco::GenParticleCollection leptons;
@@ -63,10 +64,10 @@ public :
     bool doPhotons_ = true;
     bool nNeutrinos_ = 0;
     bool doFiducial_ = false;
-    bool doBorn_ = true;
-    bool doLHE_ = true;
-    bool doPreFSR_ = true;
-    bool doBareLeptons_ = true;
+    bool doBorn_ = false;
+    bool doLHE_ = false;
+    bool doPreFSR_ = false;
+    bool doBareLeptons_ = false;
 
     float refWeight = 1;
 
@@ -90,6 +91,8 @@ public :
     Float_t LHEScaleWeightAltSet1[N_LHESCALE_WEIGHTS_];
     UInt_t nLHEUnknownWeight = 0;
     Float_t LHEUnknownWeight[100];
+    UInt_t nMEParamWeight = 0;
+    Float_t MEParamWeight[100];
     UInt_t nLHEUnknownWeightAltSet1 = 0;
     Float_t LHEUnknownWeightAltSet1[100];
 
@@ -108,6 +111,7 @@ public :
     bool altScaleWeights_ = false;
     std::array<bool, MAX_PDF_SETS> pdfWeights_ = {{false}};
     bool unknownWeights_ = false;
+    bool paramWeights_ = false;
     bool unknownWeightsAlt_ = false;
 
     TTreeReaderValue<UInt_t> nGenDressedLepton = {fReader, "nGenDressedLepton"};
@@ -147,6 +151,7 @@ public :
     
     // Readers to access the data (delete the ones you do not need).
     virtual void    Init(TTree *tree) override;
+    virtual void    SetScaleFactors() override;
     NanoGenSelectorBase(TTree * /*tree*/ =0) { }
     ~NanoGenSelectorBase() { }
     virtual void    SetupNewDirectory() override;
