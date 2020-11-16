@@ -1,0 +1,10 @@
+[Setup]
+user = choij
+analysis = ZGen
+dataset_manager_path = /afs/cern.ch/work/c/choij/CMSSW/CMSSW_11_0_0/src
+dataset_manager_name = AnalysisDatasetManager
+combine_path = %(dataset_manager_path)s/HiggsCombine/CMSSW_8_1_0/src/HiggsAnalysis/CombinedLimit
+output_path = /eos/user/k/%(user)s/%(analysis)sAnalysisData
+fakeRate_output = %(output_path)s/FakeRates
+hist_output = %(output_path)s/HistFiles
+combine_output = %(output_path)s/CombineData
