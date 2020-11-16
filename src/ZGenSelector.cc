@@ -112,6 +112,7 @@ void ZGenSelector::SetComposite() {
 void ZGenSelector::FillHistograms(Long64_t entry, std::pair<Systematic, std::string> variation) { 
     int step = 0;
     int failStep = 0;
+	//std::cout << variation.first << " " << variation.second << std::endl;
 
     step++;
     if (channel_ != mm && channel_ != ee) 

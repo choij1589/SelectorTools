@@ -322,6 +322,10 @@ void NanoGenSelectorBase::LoadBranchesNanoAOD(Long64_t entry, SystPair variation
         leptons = bareLeptons;
         neutrinos = fsneutrinos;
     }
+	else if (variation.first == MatchedDressedLeptons) {
+		leptons = matchedDressedLeptons;
+		neutrinos = fsneutrinos;
+	}
     else if (variation.first == BornParticles) {
         leptons = bornLeptons;
         neutrinos = bornNeutrinos;
