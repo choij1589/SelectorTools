@@ -25,6 +25,7 @@
 class NanoGenSelectorBase : public SelectorBase {
 public :
     ScaleFactor* ptZSF_;
+    ScaleFactor* ptWSF_;
     PDFWeightsHelper pdfweightshelper_;
     // Derived values
     reco::GenParticleCollection leptons;
@@ -55,6 +56,7 @@ public :
     float mVlhe;
     float MV_GEN_;
     float GAMMAV_GEN_;
+    bool n3llcorr_ = false;
     bool nnlops_ = false;
     int weightSuppress_ = 0;
     int thweightSuppress_ = 0;
