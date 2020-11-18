@@ -216,7 +216,19 @@ void NanoGenSelectorBase::LoadBranchesNanoAOD(Long64_t entry, SystPair variation
         lheNeutrinos.clear();
 
         jets.clear();
+		genjets.clear();
         lhejets.clear();
+
+		if (variation.first != LHEParticles) {
+			genjets.clear();
+			for (size_t i = 0; i < *nGenJet; i++) {
+				auto genjet = makeGenParticle(0, 1, GenJet_pt.At(i),
+						GenJet_eta.At(i), GenJet_phi.At(i), GenJet_mass.At(i));
+				genjets.emplace_back(genjet.polarP4());
+			}
+		} // no need to sort genjets, they're already pt sorted
+
+
         for (size_t i = 0; i < *nGenDressedLepton; i++) {
             LorentzVector vec;
             if (GenDressedLepton_hasTauAnc.At(i)) {
@@ -249,11 +261,20 @@ void NanoGenSelectorBase::LoadBranchesNanoAOD(Long64_t entry, SystPair variation
                         bornLeptons.emplace_back(part);
                     // Only works with photos!
                     if (doPreFSR_ && ((!foundStatus746 && fromHardProcessFS) || GenPart_status.At(i) == 746)) {
-                        if (GenPart_status.At(i) == 746 && !foundStatus746) {
+                        
+						/*
+						if (GenPart_status.At(i) == 746 && !foundStatus746) {
                             preFSRLeptons.clear();
                             foundStatus746 = true;
                         }
-                        preFSRLeptons.emplace_back(part);
+						*/
+
+						// match preFSRLeptons as genjets matched to gen leptons
+						for (const auto &genjet : genjets) {
+							const bool matched = reco::deltaR(part, genjet) < 0.3;
+							if (matched)
+								preFSRLeptons.emplace_back(part);
+						}
                     }
                 }
                 else if (std::abs(part.pdgId()) == 12 || std::abs(part.pdgId()) == 14) {
