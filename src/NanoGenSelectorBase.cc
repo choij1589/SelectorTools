@@ -219,13 +219,11 @@ void NanoGenSelectorBase::LoadBranchesNanoAOD(Long64_t entry, SystPair variation
 		genjets.clear();
         lhejets.clear();
 
-		if (variation.first != LHEParticles) {
-			genjets.clear();
-			for (size_t i = 0; i < *nGenJet; i++) {
-				auto genjet = makeGenParticle(0, 1, GenJet_pt.At(i),
-						GenJet_eta.At(i), GenJet_phi.At(i), GenJet_mass.At(i));
-				genjets.emplace_back(genjet.polarP4());
-			}
+		genjets.clear();
+		for (size_t i = 0; i < *nGenJet; i++) {
+			auto genjet = makeGenParticle(0, 1, GenJet_pt.At(i),
+			GenJet_eta.At(i), GenJet_phi.At(i), GenJet_mass.At(i));
+			genjets.emplace_back(genjet.polarP4());
 		} // no need to sort genjets, they're already pt sorted
 
 
@@ -260,8 +258,8 @@ void NanoGenSelectorBase::LoadBranchesNanoAOD(Long64_t entry, SystPair variation
                     if (isHardProcess && doBorn_)
                         bornLeptons.emplace_back(part);
                     // Only works with photos!
-                    if (doPreFSR_ && ((!foundStatus746 && fromHardProcessFS) || GenPart_status.At(i) == 746)) {
-                        
+                    //if (doPreFSR_ && ((!foundStatus746 && fromHardProcessFS) || GenPart_status.At(i) == 746)) {
+                    if (doPreFSR_) {  
 						/*
 						if (GenPart_status.At(i) == 746 && !foundStatus746) {
                             preFSRLeptons.clear();
