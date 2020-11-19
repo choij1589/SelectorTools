@@ -16,7 +16,7 @@ void ZGenSelector::Init(TTree *tree)
     }
     // Add CutFlow for Unknown to understand when channels aren't categorized
     histMap1D_[{"CutFlow", Unknown, Central}] = {};
-    std::vector<std::string> basehists1D = {"CutFlow", "ZMass", "yZ", "ptZ", "phiZ", "ptl1", "etal1", "phil1", "ptl2", "etal2", "phil2", 
+    std::vector<std::string> basehists1D = {"CutFlow", "ZMass", "yZ", "ptZ", "phiZ", "ptl1", "etal1", "phil1", "ptl2", "etal2", "phil2", "nLeptons", 
         "ptj1", "ptj2", "ptj3", "etaj1", "etaj2", "etaj3", "phij1", "phij2", "phij3", "nJets",
         "MET", "HT",};
     hists1D_ = basehists1D;
@@ -27,7 +27,7 @@ void ZGenSelector::Init(TTree *tree)
     //}
     systHists_ = hists1D_;
 
-    weighthists1D_ = {"CutFlow", "ZMass", "yZ", "ptZ", "phiZ", "ptl1", "etal1", "ptl2", "etal2", 
+    weighthists1D_ = {"CutFlow", "ZMass", "yZ", "ptZ", "phiZ", "ptl1", "etal1", "ptl2", "etal2", "nLeptons",
         "ptj1", "ptj2", "ptj3", "etaj1", "etaj2", "etaj3", "nJets",
         "MET", "HT", };
     nLeptons_ = 2;
@@ -231,6 +231,7 @@ void ZGenSelector::FillHistograms(Long64_t entry, std::pair<Systematic, std::str
     SafeHistFill(histMap1D_, "ptl2", channel_, variation.first, lep2.pt(), weight);
     SafeHistFill(histMap1D_, "etal2", channel_, variation.first, lep2.eta(), weight);
     SafeHistFill(histMap1D_, "phil2", channel_, variation.first, lep2.phi(), weight);
+	SafeHistFill(histMap1D_, "nLeptons", channel_, variation.first, leptons.size(), weight);
     SafeHistFill(histMap1D_, "nJets", channel_, variation.first, jets.size(), weight);
     SafeHistFill(histMap1D_, "MET", channel_, variation.first, genMet.pt(), weight);
     SafeHistFill(histMap1D_, "HT", channel_, variation.first, ht, weight);
