@@ -231,6 +231,8 @@ void NanoGenSelectorBase::LoadBranchesNanoAOD(Long64_t entry, SystPair variation
             LorentzVector vec;
             if (GenDressedLepton_hasTauAnc.At(i)) {
                 continue;
+				// dressedLeptons.clear();
+				// break;
             }
             dressedLeptons.emplace_back(makeGenParticle(GenDressedLepton_pdgId.At(i), 1, GenDressedLepton_pt.At(i), 
                                         GenDressedLepton_eta.At(i), GenDressedLepton_phi.At(i), GenDressedLepton_mass.At(i)));
@@ -259,7 +261,7 @@ void NanoGenSelectorBase::LoadBranchesNanoAOD(Long64_t entry, SystPair variation
                         bornLeptons.emplace_back(part);
                     // Only works with photos!
                     //if (doPreFSR_ && ((!foundStatus746 && fromHardProcessFS) || GenPart_status.At(i) == 746)) {
-                    if (doPreFSR_) {  
+                    if (doPreFSR_ && isPrompt && GenPart_status.At(i) == 1) {  
 						/*
 						if (GenPart_status.At(i) == 746 && !foundStatus746) {
                             preFSRLeptons.clear();
@@ -268,9 +270,25 @@ void NanoGenSelectorBase::LoadBranchesNanoAOD(Long64_t entry, SystPair variation
 						*/
 
 						// match preFSRLeptons as genjets matched to gen leptons
+						reco::GenParticleCollection temp_leptons;
 						for (const auto &genjet : genjets) {
-							const bool matched = reco::deltaR(part, genjet) < 0.3;
+							const bool matched = reco::deltaR(part, genjet) < 0.1;
 							if (matched)
+								temp_leptons.emplace_back(part);
+								//preFSRLeptons.emplace_back(part);
+						}
+						// preFSRLeptons cleaning
+						for (const auto &temp_lepton: temp_leptons) {
+							bool matched = false;
+							for (const auto &preFSRLepton: preFSRLeptons) {
+								if (matched)
+									continue;
+
+								const bool isOverlap = reco::deltaR(temp_lepton, preFSRLepton) < 0.4;
+								if (isOverlap)
+									matched = true;
+							}
+							if (!matched)
 								preFSRLeptons.emplace_back(part);
 						}
                     }
@@ -318,7 +336,7 @@ void NanoGenSelectorBase::LoadBranchesNanoAOD(Long64_t entry, SystPair variation
                 }
             }
         }
-
+		//std::sort(dressedLeptons.begin(), dressedLeptons.end(), compareMaxByPt);
         std::sort(lheLeptons.begin(), lheLeptons.end(), compareMaxByPt);
         std::sort(bareLeptons.begin(), bareLeptons.end(), compareMaxByPt);
         std::sort(fsneutrinos.begin(), fsneutrinos.end(), compareMaxByPt);
