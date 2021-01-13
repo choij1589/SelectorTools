@@ -10,6 +10,7 @@ import string
 import socket
 import logging
 import logging
+import getpass
 #try:
 import configparser
 #except:
@@ -68,11 +69,14 @@ def getManagerName():
 
 def getManagerPath():
     config_name = ""
+    #print(getpass.getuser())
     try:
-        config_name = "Templates/config.%s" % os.getlogin()
+        #config_name = "Templates/config.%s" % os.getlogin()
+        config_name = "Templates/config.%s" % str(getpass.getuser())
     except OSError:
         pass
     if not os.path.isfile(config_name):
+        print(getManagerName())
         if os.path.isdir(getManagerName()):
             return '.'
         else:

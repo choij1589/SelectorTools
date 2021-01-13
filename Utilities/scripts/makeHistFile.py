@@ -62,11 +62,12 @@ def getComLineArgs():
 
 def makeHistFile(args):
     ROOT.gROOT.SetBatch(True)
-
+   
+    # Not going to use datasetManager
     manager_path = ConfigureJobs.getManagerPath()
     if manager_path not in sys.path:
         sys.path.insert(0, "/".join([manager_path, 
-            "AnalysisDatasetManager", "Utilities/python"]))
+           "AnalysisDatasetManager", "Utilities/python"]))
 
     out = args['output_file'].split('/')
     tmpFileName = args['output_file']
