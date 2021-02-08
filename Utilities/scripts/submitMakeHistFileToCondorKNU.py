@@ -48,12 +48,15 @@ class Submitter:
 	
 	def make_base_dir(self):
 		self.base_dir = self.pwd + "/condor_base/" + self.base_name
-		if os.listdir(self.base_dir):
-			if args.force:
-				print("//==== INFO: force option activated, base directory will be overwritten")
-				shutil.rmtree(self.base_dir)
-			else:
-				raise Exception("base directory " + self.base_dir + "exists, use --force option to overwrite")
+		try:
+			if os.listdir(self.base_dir):
+				if args.force:
+					print("//==== INFO: force option activated, base directory will be overwritten")
+					shutil.rmtree(self.base_dir)
+				else:
+					raise Exception("base directory " + self.base_dir + "exists, use --force option to overwrite")
+		except:
+			pass
 		os.mkdir(self.base_dir)
 		os.mkdir(self.base_dir + "/output")
 		os.mkdir(self.base_dir + "/error")
@@ -120,17 +123,22 @@ export LD_PRELOAD="/usr/lib64/libpdcap.so"
 	
 	def hadd(self):
 		try:
+			print("//==== INFO: Waiting for the condor jobs to be finished...")
 			while True:
 				outputs = os.listdir(self.base_dir + "/temp")
 				# if job is finished
 				if len(outputs) == len(self.samples):
 					os.chdir(self.base_dir + "/temp")
 					os.system("hadd ../" + args.o + " *.root")
+					os.chdir("..")
+					shutil.rmtree(self.base_dir + "/temp")
+					print("//==== INFO: Job Finished with " + str(len(outputs)) + " samples analyzed")
 					break
 				else:
 					time.sleep(60)
 		except Exception as e:
-			print("//==== INFO: Execption occured!", e)
+			print("//==== WARNING: Execption occured!", e)
+		
 
 if __name__ == "__main__":
 	sub = Submitter()
