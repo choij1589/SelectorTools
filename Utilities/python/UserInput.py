@@ -102,6 +102,7 @@ def getHistInfo(analysis, input_hists, noConfig=False):
         return (input_hists, [])
 
     manager_path = ConfigureJobs.getManagerPath()
+    print(manager_path)
     ConfigHistTools = imp.load_source("ConfigHistTools", 
         "/".join([manager_path, "AnalysisDatasetManager/Utilities/python/ConfigHistTools.py"]))
     # For histograms produced with some postprocessing on the hist file

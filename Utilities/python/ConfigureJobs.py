@@ -10,6 +10,7 @@ import string
 import socket
 import logging
 import logging
+import getpass
 #try:
 import configparser
 #except:
@@ -69,20 +70,24 @@ def getManagerName():
 def getManagerPath():
     config_name = ""
     try:
-        config_name = "Templates/config.%s" % os.getlogin()
+        # config_name = "Templates/config.%s" % os.getlogin()
+        config_name = "Templates/config.%s" % str(getpass.getuser())
     except OSError:
         pass
     if not os.path.isfile(config_name):
+        #if "knu" in socket.gethostname():
+        #    logging.warning("dataset_manager_name not specified in config file %s" % config_name)
+        #    logging.warning("Using default '%s'" % default_name)
+        #    return default_name
+        #else:
         if os.path.isdir(getManagerName()):
             return '.'
         else:
-            raise IOError("Failed to find valid config file. Looking for %s" 
-                    % config_name)
+            raise IOError("Failed to find valid config file. Looking for %s" % config_name)
     config = configparser.ConfigParser()
     config.read_file(open(config_name))
     if "dataset_manager_path" not in config['Setup']:
-        raise ValueError("dataset_manager_path not specified in config file %s"
-                        % config_name)
+        raise ValueError("dataset_manager_path not specified in config file %s" % config_name)
     return config['Setup']['dataset_manager_path'] + "/"
 
 def getCombinePath():
