@@ -18,4 +18,4 @@ output                = ../output/output_2j/job_$(Process).out
 error                 = ../error/error_2j/job_$(Process).err
 log                   = ../log/log_2j/job_$(Process).log
 
-queue 1000
+queue 999

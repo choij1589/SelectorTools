@@ -5,4 +5,6 @@ WARNING:root:Using default 'AnalysisDatasetManager'
 INFO:root:Processing channel Inclusive
 INFO:root:Processing dataset Unknown
 Info in <TCanvas::MakeDefCanvas>:  created default TCanvas with name c1
-INFO:root:Processed 2207 events after 1 files
+INFO:root:Processed 2269 events after 1 files
+fatal: stat 'condor_base/scripts/run_0j.sh': No such file or directory
+WARNING:root:Not a git repo, skipping git hash/diff

@@ -364,6 +364,7 @@ class SelectorDriver(object):
                 break
                 
     def processFile(self, filename, addSumweights, chan, filenum=1):
+        print(filename)
         rtfile = ROOT.TFile.Open(filename)
         if not rtfile or not rtfile.IsOpen() or rtfile.IsZombie():
             raise IOError("Failed to open file %s!" % filename)

@@ -18,4 +18,4 @@ output                = ../output/output_1j/job_$(Process).out
 error                 = ../error/error_1j/job_$(Process).err
 log                   = ../log/log_1j/job_$(Process).log
 
-queue 601
+queue 600
