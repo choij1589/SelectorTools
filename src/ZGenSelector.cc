@@ -17,8 +17,8 @@ void ZGenSelector::Init(TTree *tree)
     // Add CutFlow for Unknown to understand when channels aren't categorized
     histMap1D_[{"CutFlow", Unknown, Central}] = {};
     std::vector<std::string> basehists1D = {"CutFlow", "ZMass", "yZ", "ptZ", "phiZ", "ptl1", "etal1", "phil1", "ptl2", "etal2", "phil2", "nLeptons", 
-        "ptj1", "ptj2", "ptj3", "etaj1", "etaj2", "etaj3", "phij1", "phij2", "phij3", "nJets",
-        "MET", "HT",};
+    "ptj1", "ptj2", "ptj3", "etaj1", "etaj2", "etaj3", "phij1", "phij2", "phij3", "nJets",
+	"dRj1l1", "dRj1l2", "dRj2l1", "dRj2l2", "dRj1j2", "dRl1l2", "MET", "HT",};
     hists1D_ = basehists1D;
     //std::vector<std::string> partonicChans = {"uu_dd", "uubar_ddbar", "ug_dg", "ubarg_dbarg", "gg", "other"};
     //for (auto& chan : partonicChans) {
@@ -243,7 +243,26 @@ void ZGenSelector::FillHistograms(Long64_t entry, std::pair<Systematic, std::str
             SafeHistFill(histMap1D_, ("phij"+std::to_string(i)).c_str(), channel_, variation.first, jet.phi(), weight);
         }  
     }
-    
+    // deltaR distribution
+	const double dRl1l2 = reco::deltaR(lep1, lep2);
+	SafeHistFill(histMap1D_, "dRl1l2", channel_, variation.first, dRl1l2, weight);
+	if (jets.size() >= 1) {
+		const auto& j1 = jets.at(0);
+		const double dRj1l1 = reco::deltaR(j1, lep1);
+		const double dRj1l2 = reco::deltaR(j1, lep2);
+		SafeHistFill(histMap1D_, "dRj1l1", channel_, variation.first, dRj1l1, weight);
+		SafeHistFill(histMap1D_, "dRj1l2", channel_, variation.first, dRj1l2, weight);
+	}
+	if (jets.size() >= 2) {
+		const auto& j1 = jets.at(0);
+		const auto& j2 = jets.at(1);
+		const double dRj2l1 = reco::deltaR(j2, lep1);
+		const double dRj2l2 = reco::deltaR(j2, lep2);
+		const double dRj1j2 = reco::deltaR(j1, j2);
+		SafeHistFill(histMap1D_, "dRj2l1", channel_, variation.first, dRj2l1, weight);
+		SafeHistFill(histMap1D_, "dRj2l2", channel_, variation.first, dRj2l2, weight);
+		SafeHistFill(histMap1D_, "dRj1j2", channel_, variation.first, dRj1j2, weight);
+	}
     // Should check how slow this is. For now it's off 
     return;
 
