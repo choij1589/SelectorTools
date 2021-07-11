@@ -127,7 +127,9 @@ void ZGenSelector::FillHistograms(Long64_t entry, std::pair<Systematic, std::str
     auto lep2 = leptons.size() > 1 ? leptons.at(1) : reco::GenParticle();
 
     step++;
-    if (zCand.mass() < 50.)
+	// ZCand mass cut temporarily set to 100 GeV to compare mass binned & inclusive
+    //if (zCand.mass() < 50.)
+	if (zCand.mass() < 100.)
         failStep = step;
     step++;
     if (lep1.pt() < 25. || lep2.pt() < 25.)

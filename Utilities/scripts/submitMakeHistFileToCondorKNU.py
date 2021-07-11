@@ -12,7 +12,7 @@ parser.add_argument("-s", default=None, required=True, type=str, help="TODO: wha
 parser.add_argument("-d", default=None, required=True, type=str, help="path to a sample directory")
 parser.add_argument("-o", default=None, required=True, type=str, help="output root file name")
 parser.add_argument("--se", default=False, action="store_true", help="use SE_Userhome as base data directory")
-parser.add_argument("-u", default=None, required=False, type=str, help="provide user name in case you need to use other user's SE_userhome directory")
+parser.add_argument("--user", default=None, required=False, type=str, help="provide user name in case you need to use other user's SE_userhome directory")
 parser.add_argument("--input_tier", default="NanoAOD", required=False, type=str, help="input tier")
 parser.add_argument("--selectorArgs", default=None, required=False, type=str, nargs="+", help="selector arguments")
 parser.add_argument("--force", default=False, action="store_true", help="overwrite base directory")
@@ -23,8 +23,8 @@ class Submitter:
 		self.pwd = os.getcwd()
 		self.user = ""
 		self.se_home = "dcap://cluster142.knu.ac.kr//pnfs/knu.ac.kr/data/cms/store/user/"
-		if args.se and args.u != None:
-			self.user = args.u
+		if args.se and args.user != None:
+			self.user = args.user
 		else:
 			self.user = os.getlogin()
 		self.base_name = args.o.split(".")[0]

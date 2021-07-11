@@ -1,5 +1,5 @@
-000 (55040.748.000) 04/16 16:58:27 Job submitted from host: <155.230.20.251:9618?addrs=155.230.20.251-9618+[2407-c000-c024-0-22cb-b653-2fd3-3109]-9618&noUDP&sock=1441242_b68e_19>
+000 (56063.748.000) 05/03 14:01:12 Job submitted from host: <155.230.20.251:9618?addrs=155.230.20.251-9618+[2407-c000-c024-0-22cb-b653-2fd3-3109]-9618&noUDP&sock=1441242_b68e_19>
 ...
-009 (55040.748.000) 04/16 16:58:47 Job was aborted by the user.
+009 (56063.748.000) 05/03 14:01:31 Job was aborted by the user.
 	via condor_rm (by user choij)
 ...

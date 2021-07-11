@@ -1,22 +1,26 @@
-000 (55040.005.000) 04/16 16:58:25 Job submitted from host: <155.230.20.251:9618?addrs=155.230.20.251-9618+[2407-c000-c024-0-22cb-b653-2fd3-3109]-9618&noUDP&sock=1441242_b68e_19>
+000 (56063.005.000) 05/03 14:01:10 Job submitted from host: <155.230.20.251:9618?addrs=155.230.20.251-9618+[2407-c000-c024-0-22cb-b653-2fd3-3109]-9618&noUDP&sock=1441242_b68e_19>
 ...
-001 (55040.005.000) 04/16 16:58:37 Job executing on host: <155.230.21.119:9618?addrs=155.230.21.119-9618+[2407-c000-c024-0-beee-7bff-fe2f-e075]-9618&noUDP&sock=1648_f82a_3>
+001 (56063.005.000) 05/03 14:01:16 Job executing on host: <155.230.21.109:9618?addrs=155.230.21.109-9618+[2407-c000-c024-0-5246-5dff-fee4-3bac]-9618&noUDP&sock=32691_e2a6_3>
 ...
-006 (55040.005.000) 04/16 16:58:43 Image size of job updated: 22004
-	8  -  MemoryUsage of job (MB)
-	7964  -  ResidentSetSize of job (KB)
+006 (56063.005.000) 05/03 14:01:25 Image size of job updated: 23056
+	9  -  MemoryUsage of job (MB)
+	8700  -  ResidentSetSize of job (KB)
 ...
-004 (55040.005.000) 04/16 16:58:43 Job was evicted.
+006 (56063.005.000) 05/03 14:01:29 Image size of job updated: 74700
+	34  -  MemoryUsage of job (MB)
+	34584  -  ResidentSetSize of job (KB)
+...
+004 (56063.005.000) 05/03 14:01:29 Job was evicted.
 	(0) Job was not checkpointed.
-		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:01, Sys 0 00:00:01  -  Run Remote Usage
 		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
 	0  -  Run Bytes Sent By Job
-	10493  -  Run Bytes Received By Job
+	10498  -  Run Bytes Received By Job
 	Partitionable Resources :    Usage  Request Allocated 
 	   Cpus                 :        0        1         1 
-	   Disk (KB)            :       28  2048000   3823374 
-	   Memory (MB)          :        8     2000      2000 
+	   Disk (KB)            :       28  2048000   3819397 
+	   Memory (MB)          :       34     2000      2000 
 ...
-009 (55040.005.000) 04/16 16:58:43 Job was aborted by the user.
+009 (56063.005.000) 05/03 14:01:29 Job was aborted by the user.
 	via condor_rm (by user choij)
 ...
