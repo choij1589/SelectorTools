@@ -110,6 +110,8 @@ void NanoGenSelectorBase::Init(TTree *tree)
     }
 
     doFiducial_ = selection_ != None;
+	//doFiducial_ = true;
+	//std::cout << doFiducial_ << std::endl;
     if (!doFiducial_)
         std::cout << "INFO: No fiducial selection will be applied\n";
     fReader.SetTree(tree);

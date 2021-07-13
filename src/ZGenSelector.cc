@@ -128,8 +128,7 @@ void ZGenSelector::FillHistograms(Long64_t entry, std::pair<Systematic, std::str
 
     step++;
 	// ZCand mass cut temporarily set to 100 GeV to compare mass binned & inclusive
-    //if (zCand.mass() < 50.)
-	if (zCand.mass() < 100.)
+    if (zCand.mass() < 50.)
         failStep = step;
     step++;
     if (lep1.pt() < 25. || lep2.pt() < 25.)
@@ -151,8 +150,11 @@ void ZGenSelector::FillHistograms(Long64_t entry, std::pair<Systematic, std::str
         //    SafeHistFill(weighthistMap1D_, "CutFlow", channel_, variation.first, j, i, thweight);
         //}
     }
-    if (doFiducial_ && failStep != 0)
-        return;
+    if (doFiducial_ && failStep != 0) return;
+
+	// independent fo doFiducial_
+	if (zCand.mass() < 100.) return;
+
     if (variation.first == Central)
         mcWeights_->Fill(weight/std::abs(refWeight));
 

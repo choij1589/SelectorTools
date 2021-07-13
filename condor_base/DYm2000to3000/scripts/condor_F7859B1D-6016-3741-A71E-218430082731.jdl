@@ -1,0 +1,21 @@
+Universe		= vanilla
+Executable           = run_F7859B1D-6016-3741-A71E-218430082731.sh
+GetEnv               = false
+
+WhenToTransferOutput = On_Exit_Or_Evict
+ShouldTransferFiles  = yes
+want_graceful_removal = true
+request_memory       = 2000
+request_disk         = 2048000
+use_x509userproxy = True
+
+# stop jobs from running if they blow up in size or memory
+periodic_hold        = (DiskUsage/1024 > 10.0*2000 ||  ImageSize/1024 > RequestMemory*2)
+
++JobFlavour = "workday"
+arguments             = $(Process)
+output                = /d0/scratch/choij/GenValidation/CMSSW_11_0_0/src/Analysis/SelectorTools/condor_base/DYm2000to3000/output/job_F7859B1D-6016-3741-A71E-218430082731.out
+error                 = /d0/scratch/choij/GenValidation/CMSSW_11_0_0/src/Analysis/SelectorTools/condor_base/DYm2000to3000/error/job_F7859B1D-6016-3741-A71E-218430082731.err
+log                   = /d0/scratch/choij/GenValidation/CMSSW_11_0_0/src/Analysis/SelectorTools/condor_base/DYm2000to3000/log/job_F7859B1D-6016-3741-A71E-218430082731.log
+
+queue 1
